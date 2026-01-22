@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Otimizador Master V38 (New Features)</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.mini.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+  :root { 
+      --bg: #0f172a; --panel: #1e293b; --text: #f1f5f9; --muted: #94a3b8; 
+      --accent: #10b981; --accent2: #3b82f6; --warn: #f59e0b; --bad: #ef4444; 
+      --cons: #a855f7; /* Roxo para consumo */
+      --input-bg: #020617; --border: #334155; 
+  }
+  * { box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', sans-serif; margin: 0; font-size: 12px; }
+  
+  .container { max-width: 1400px; margin: 0 auto; padding: 10px; }
+  header { background: rgba(2,6,23,0.95); padding: 10px 16px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; border-radius: 8px; margin-bottom: 15px; }
+  main { display: grid; grid-template-columns: 360px 1fr; gap: 15px; align-items: start; }
+  @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 15px; margin-bottom: 10px; }
+  label { display: block; color: var(--muted); margin-bottom: 4px; font-weight: 600; font-size: 11px; }
+  input, select { width: 100%; background: var(--input-bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 6px; outline: none; }
+  input:focus, textarea:focus { border-color: var(--accent2); }
+  
+  textarea.compact { width: 100%; height: 36px; min-height: 36px; resize: none; overflow: hidden; white-space: pre; font-family: monospace; background: var(--input-bg); color: var(--text); border: 1px solid var(--border); border-radius: 4px; padding: 6px; }
+  textarea.compact:focus { height: 150px; position: absolute; z-index: 100; width: 320px; box-shadow: 0 10px 25px #000; border-color: var(--accent); background: var(--panel); }
+
+  .btn { cursor: pointer; font-weight: 600; border: none; padding: 10px; border-radius: 4px; width: 100%; margin-top: 5px; transition: 0.2s; }
+  .btn:hover { opacity: 0.9; }
+  .btn.primary { background: var(--accent); color: #022c22; }
+  .btn.secondary { background: var(--accent2); color: white; }
+  .btn.outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+  .btn.outline:hover { border-color: var(--text); color: var(--text); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .file-row { display: flex; justify-content: space-between; align-items: center; gap: 5px; }
+  .status-tag { font-size: 9px; color: var(--accent); margin-left: 5px; max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  
+  .scenario-box { border: 1px solid var(--accent); background: rgba(16, 185, 129, 0.05); padding: 10px; border-radius: 6px; margin-top: 15px; margin-bottom: 10px; }
+  
+  .chart-container { position: relative; height: 300px; width: 100%; background: var(--input-bg); border: 1px solid var(--border); border-radius: 6px; margin-top: 10px; }
+  .chart-container.small { height: 200px; }
+  
+  table { width: 100%; border-collapse: collapse; font-size: 10px; margin-top: 5px; }
+  th, td { border-bottom: 1px solid var(--border); padding: 4px; text-align: right; }
+  th { text-align: center; color: var(--accent2); position: sticky; top: 0; background: var(--panel); }
+  tr:hover { background: rgba(255,255,255,0.05); }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-top: 10px; }
+  .kpi { background: var(--input-bg); padding: 6px; border-radius: 4px; border: 1px solid var(--border); text-align: center; }
+  .kpi .v { font-weight: 700; font-size: 13px; color: #f1f5f9; }
+  .kpi .sub { font-size: 9px; color: var(--muted); }
+
+  /* New Table Styles */
+  .loss-table-container { margin-top:10px; background:rgba(0,0,0,0.2); padding:10px; border-radius:6px; border:1px solid var(--border); }
+  .loss-table th { text-align: left; background: transparent; color: var(--muted); }
+  .loss-table td { text-align: left; font-size: 11px; }
+  .loss-table .num { text-align: right; font-weight: bold; }
+
+  #loading { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 999; justify-content: center; align-items: center; color: #fff; flex-direction: column; }
+  .res-block { border-left: 3px solid var(--accent); background: rgba(255,255,255,0.03); padding: 8px; margin-bottom: 5px; border-radius: 0 4px 4px 0; }
+  
+  .favad-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; font-size: 10px; }
+  .favad-grid label { margin: 0; font-size: 9px; }
+  .favad-grid input { padding: 2px 4px; height: 22px; }
+  
+  .res-detail-grid { display: grid; grid-template-columns: 1fr 300px; gap: 10px; }
+  @media (max-width: 800px) { .res-detail-grid { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+
+<div id="loading"><div>⚙️ Processando...</div></div>
+
+<div class="container">
+    <header>
+      <h1 style="margin:0; font-size:16px; color:var(--accent)">Otimizador Master V38 (New Features)</h1>
+      <div style="display:flex; gap:5px">
+        <button class="btn secondary" style="width:auto; padding:4px 12px;" id="btnSaveState">Salvar JSON</button>
+        <button class="btn secondary" style="width:auto; padding:4px 12px;" onclick="document.getElementById('jsonInput').click()">Carregar JSON</button>
+        <input type="file" id="jsonInput" style="display:none" accept=".json" />
+      </div>
+    </header>
+
+    <main>
+      <section>
+        <div class="card">
+            <div style="margin-bottom:10px">
+                <div style="display:flex; justify-content:space-between">
+                    <label>1. Vazão da Fonte</label>
+                    <select id="unitSource" style="width:70px; height:20px; padding:0; font-size:10px;"><option value="ls">L/s</option><option value="m3h">m³/h</option></select>
+                </div>
+                <div class="file-row">
+                    <input type="file" accept=".csv, .xlsx, .xls" onchange="handleFile(this, 'Q1')">
+                    <span id="statQ1" class="status-tag">Vazio</span>
+                </div>
+                <textarea id="txtQ1" class="compact" placeholder="Cole: Data Hora | Valor (ex: 12,5)" oninput="handleText(this, 'Q1')" spellcheck="false"></textarea>
+            </div>
+            
+            <div style="margin-bottom:10px">
+                <label>2. Pressão (mca)</label>
+                <div class="file-row">
+                    <input type="file" accept=".csv, .xlsx, .xls" onchange="handleFile(this, 'P')">
+                    <span id="statP" class="status-tag">Vazio</span>
+                </div>
+                <textarea id="txtP" class="compact" placeholder="Cole: Data Hora | Valor (ex: 30,5)" oninput="handleText(this, 'P')" spellcheck="false"></textarea>
+            </div>
+
+            <div class="grid-2" style="background:rgba(0,0,0,0.2); padding:5px; border-radius:4px; grid-template-columns: 1fr 1fr 1fr;">
+                <div><label title="Remove picos irreais">Filtro Z-Score</label><input id="zscore" type="text" value="3,0" onblur="formatInput(this)"></div>
+                <div><label title="Descarta valores acima disto">Corte Máx.</label><input id="valCutoff" type="number" placeholder="Opc" style="width:100%"></div>
+                <div><label>Dias de Pico</label><input id="nDiasPico" type="number" value="1" min="1"></div>
+            </div>
+
+            <button class="btn primary" onclick="processData()">1. Processar Dados & Cenários</button>
+            <div id="processingMsg" style="font-size:10px; margin-top:5px; color:#f59e0b"></div>
+        </div>
+
+        <div class="card">
+            <div style="margin-bottom:10px">
+                <div style="display:flex; justify-content:space-between">
+                    <label>3. Cadastro (Consumo)</label>
+                    <select id="unitDemand" style="width:70px; height:20px; padding:0; font-size:10px;" onchange="updateInfraStats()">
+                        <option value="m3mes">m³/mês</option><option value="ls">L/s</option><option value="m3h">m³/h</option>
+                    </select>
+                </div>
+                <div class="file-row">
+                    <input type="file" accept=".csv, .xlsx, .xls" onchange="handleFile(this, 'CAD')">
+                    <span id="statCAD" class="status-tag">Vazio</span>
+                </div>
+                <textarea id="txtCAD" class="compact" placeholder="Cole lista de consumos..." oninput="handleText(this, 'CAD')" spellcheck="false"></textarea>
+            </div>
+
+            <div class="grid-2">
+                <div><label>Ligs (Auto)</label><input id="numLigacoes" type="number" readonly style="font-weight:bold; color:var(--accent)"></div>
+                <div><label>Micro Total (L/s)</label><input id="consumoMicro" type="text" readonly style="color:var(--text)"></div>
+            </div>
+
+            <div style="background:rgba(0,0,0,0.2); padding:8px; margin:5px 0; border-radius:4px; border:1px solid var(--border);">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                    <label style="color:var(--accent2); font-weight:bold; font-size:11px; margin:0;">⚙️ Parâmetros FAVAD</label>
+                    <button style="background:none; border:none; color:var(--muted); cursor:pointer; font-size:10px;" onclick="resetParams()">Resetar</button>
+                </div>
+                
+                <div class="favad-grid">
+                    <div><label>Hab/Lig</label><input id="habPorLig" type="text" value="3,0" onblur="formatInput(this)"></div>
+                    <div><label>% Não-Res</label><input id="pctNaoRes" type="text" value="10" onblur="formatInput(this)"></div>
+                    
+                    <div><label>Q1 (hab)</label><input id="c_Q1" type="text" value="3,4" onblur="formatInput(this)"></div>
+                    <div><label>Q2 (eco)</label><input id="c_Q2" type="text" value="8,0" onblur="formatInput(this)"></div>
+                    
+                    <div><label>Q3 (ramal)</label><input id="c_Q3" type="text" value="1,0" onblur="formatInput(this)"></div>
+                    <div><label>Q4 (boia)</label><input id="c_Q4" type="text" value="0,5" onblur="formatInput(this)"></div>
+                    
+                    <div><label>P. Ref</label><input id="c_PRef" type="text" value="50" onblur="formatInput(this)"></div>
+                    <div><label>Econ/Lig</label><input id="econPorLig" type="text" value="1,0" onblur="formatInput(this)"></div>
+                    
+                    <div><label>Alpha (N1)</label><input id="alpha" type="text" value="1,50" onblur="formatInput(this)"></div>
+                    <div><label>Dias/Mês</label><input id="diasMes" type="text" value="30" oninput="updateInfraStats()" onblur="formatInput(this)"></div>
+                </div>
+            </div>
+
+            <div style="border-top:1px dashed var(--border); padding-top:10px; margin-top:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                    <label style="margin:0">Reservatórios</label>
+                    <input id="qtdRes" type="number" value="1" min="0" style="width:50px; height:22px;" onchange="updateResInputs()">
+                </div>
+                <div id="resContainer"></div>
+            </div>
+
+            <button class="btn primary" onclick="calculateBalance()">⚡ Calcular Balanço</button>
+        </div>
+      </section>
+
+      <section class="card" style="height:fit-content; min-height:800px;">
+        
+        <div class="scenario-box">
+            <label style="color:var(--accent); font-size:13px; margin:0;">🎯 Escolha o Cenário</label>
+            <div style="display:flex; gap:10px; margin-top:5px;">
+                <select id="scenarioSelector" style="font-weight:bold; border-color:var(--accent); flex:1;" onchange="handleScenarioChange()">
+                    <option value="" disabled selected>Processe os dados primeiro...</option>
+                </select>
+                <select id="dateSelector" style="display:none; flex:1; border-color:var(--accent2); background:#1e293b;" onchange="calculateBalance()">
+                    <option value="" disabled selected>Escolha o dia...</option>
+                </select>
+            </div>
+            <div id="scenarioDesc" style="font-size:10px; color:var(--muted); margin-top:5px; font-style:italic;">...</div>
+        </div>
+
+        <div id="diagnosis" style="margin-bottom:10px; font-family:monospace; font-size:10px;"></div>
+
+        <div class="stats">
+            <div class="kpi"><div class="sub">Perda Real</div><div class="v" id="kpiPR">-</div><div class="sub">L/s Méd</div></div>
+            <div class="kpi"><div class="sub">Perda Apar.</div><div class="v" id="kpiPA">-</div><div class="sub">L/s Méd</div></div>
+            <div class="kpi"><div class="sub">Consumo</div><div class="v" id="kpiCons">-</div><div class="sub">L/s Méd</div></div>
+            <div class="kpi"><div class="sub">IPD</div><div class="v" id="kpiIPD">-</div><div class="sub">%</div></div>
+        </div>
+
+        <div class="loss-table-container">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
+                <h3 style="margin:0; font-size:12px; color:#f59e0b">📊 Resumo de Volume de Perdas (Período Selecionado)</h3>
+                <button class="btn outline" style="width:auto; padding:2px 8px; font-size:10px;" onclick="exportLossSummary()">Exportar Tabela</button>
+            </div>
+            <table class="loss-table">
+                <thead>
+                    <tr>
+                        <th>Componente</th>
+                        <th style="text-align:right">Volume Total (m³/dia)</th>
+                        <th style="text-align:right">% do Total de Perdas</th>
+                    </tr>
+                </thead>
+                <tbody id="lossTableBody">
+                    <tr><td colspan="3" style="text-align:center; color:#555;">Calcule para ver os dados...</td></tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div style="margin-top:15px; margin-bottom:5px;"><label>Balanço Hídrico (Vazões)</label></div>
+        <div class="chart-container"><canvas id="mainChart"></canvas></div>
+
+        <div style="margin-top:15px; margin-bottom:5px;"><label>Perfil de Pressão</label></div>
+        <div class="chart-container small"><canvas id="pressureChart"></canvas></div>
+
+        <div style="margin-top:20px; border-top:1px solid var(--border); padding-top:15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="margin:0; font-size:14px; color:var(--accent2)">🔍 Detalhamento de Reservatórios</h3>
+                <select id="resDetailSelector" style="width:150px; height:24px; padding:0 5px;" onchange="updateResDetail()">
+                    <option value="0">Reservatório 1</option>
+                </select>
+            </div>
+            
+            <div class="res-detail-grid" style="margin-top:10px;">
+                <div style="height:250px; background:var(--input-bg); border:1px solid var(--border); border-radius:6px; position:relative;">
+                    <canvas id="resChart"></canvas>
+                </div>
+                <div style="max-height:250px; overflow:auto; border:1px solid var(--border); border-radius:6px;">
+                    <table id="resTable">
+                        <thead>
+                            <tr><th>h</th><th id="thResLvl">Nível</th><th>Vazão(L/s)</th></tr>
+                        </thead>
+                        <tbody id="resTbody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; margin-top:15px; margin-bottom:5px;">
+            <button class="btn secondary" style="width:auto; padding:5px 10px; font-size:11px;" onclick="exportResults()">📥 Exportar Resultados Completos</button>
+        </div>
+
+        <div style="max-height:300px; overflow:auto;">
+            <table id="tbl">
+                <thead>
+                    <tr>
+                        <th>h</th>
+                        <th style="color:#38bdf8">Q.Distr</th>
+                        <th>P(mca)</th>
+                        <th style="color:#ef4444">P.Real</th>
+                        <th style="color:#f59e0b">P.Apar</th>
+                        <th style="color:var(--cons)">Cons.</th>
+                        <th style="background:#1e293b; color:#fff">mPR</th>
+                        <th style="background:#334155; color:#fff">mC</th>
+                    </tr>
+                </thead>
+                <tbody id="tbody"></tbody>
+            </table>
+        </div>
+      </section>
+    </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const toFixed = (n, d=2) => Number.isFinite(n) ? n.toFixed(d).replace('.', ',') : '-';
+const mean = arr => arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0;
+const safeVal = (id, def=0) => { 
+    const el = $(id); if(!el) return def;
+    if(el.type === 'number') return el.valueAsNumber || def;
+    const raw = el.value.trim(); if(!raw) return def;
+    const v = parseFloat(raw.replace(/\./g, '').replace(',', '.'));
+    return isNaN(v) ? def : v;
+};
+const formatInput = (el) => { let val = el.value.replace('.', ','); el.value = val; };
+
+let DATA = { Q1: null, P: null, CAD: null, RES: [] };
+let PROCESSED_SCENARIOS = { avg: null, peak: null, specific: null }; 
+let CHART_INSTANCE = null;
+let PRESSURE_CHART_INSTANCE = null;
+let RES_CHART_INSTANCE = null;
+let LAST_RESULT = null;
+let LAST_LOSS_SUMMARY = null;
+let ALL_DATES = [];
+
+function resetParams() {
+    $('habPorLig').value = "3,0"; $('pctNaoRes').value = "10";
+    $('c_Q1').value = "3,4"; $('c_Q2').value = "8,0";
+    $('c_Q3').value = "1,0"; $('c_Q4').value = "0,5";
+    $('c_PRef').value = "50"; $('econPorLig').value = "1,0";
+}
+
+function handleFile(input, type) {
+    const file = input.files[0]; if(!file) return;
+    $(`stat${type}`).innerText = "Lendo...";
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            if(file.name.toLowerCase().endsWith('.csv') || type === 'CAD') {
+                if(type === 'CAD') processCadText(e.target.result, true);
+                else {
+                    const map = parseTimeSeries(e.target.result);
+                    storeData(type, map);
+                    $(`stat${type}`).innerText = `CSV: ${map.size} dias`;
+                }
+            } else {
+                const wb = XLSX.read(new Uint8Array(e.target.result), {type: 'array'});
+                const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1, defval:null});
+                if(type === 'CAD') processCadRows(rows);
+                else {
+                    const map = parseExcelRows(rows);
+                    storeData(type, map);
+                    $(`stat${type}`).innerText = `XLS: ${map.size} dias`;
+                }
+            }
+        } catch(err) { console.error(err); $(`stat${type}`).innerText = "Erro"; }
+    };
+    if(file.name.toLowerCase().endsWith('.csv')) reader.readAsText(file, 'ISO-8859-1');
+    else reader.readAsArrayBuffer(file);
+}
+
+function handleText(el, type) {
+    if(type === 'CAD') processCadText(el.value, false);
+    else {
+        const map = parseTimeSeries(el.value);
+        storeData(type, map);
+        $(`stat${type}`).innerText = `Txt: ${map.size} dias`;
+    }
+}
+
+function storeData(type, map) {
+    if(type.startsWith('RES_')) {
+        const idx = parseInt(type.split('_')[1]);
+        if(!DATA.RES[idx]) DATA.RES[idx] = {};
+        DATA.RES[idx].map = map;
+    } else { DATA[type] = map; }
+}
+
+function parseSmartNum(str) {
+    if (!str || !str.trim()) return NaN;
+    let s = str.trim();
+    if (/[a-df-zA-DF-Z]/.test(s)) return NaN; 
+    if (s.includes(':') || s.includes('/')) return NaN; 
+    if (!/[0-9]/.test(s)) return NaN;
+    const hasComma = s.includes(',');
+    const hasDot = s.includes('.');
+    if((s.includes('e') || s.includes('E')) && hasComma && !hasDot) s = s.replace(',', '.');
+    else if (hasComma && hasDot) {
+        const lastComma = s.lastIndexOf(',');
+        const lastDot = s.lastIndexOf('.');
+        if (lastComma > lastDot) s = s.replace(/\./g, '').replace(',', '.');
+        else s = s.replace(/,/g, '');
+    } else if (hasComma) s = s.replace(',', '.');
+    const v = parseFloat(s);
+    return isNaN(v) ? NaN : v;
+}
+
+function parseTimeSeries(text) {
+    const map = new Map();
+    const lines = text.split(/\r?\n/);
+    lines.forEach(line => {
+        if(!line.trim()) return;
+        let dStr = null, hour = null, minute = 0, val = NaN;
+        let parts = [];
+        let hasColStructure = false;
+        if(line.includes(';')) { parts = line.split(';'); hasColStructure = true; }
+        else if(line.includes('\t')) { parts = line.split('\t'); hasColStructure = true; }
+        
+        if(hasColStructure && parts.length >= 2) {
+            const rawDT = parts[0].trim();
+            const rawVal = parts[parts.length-1].trim(); 
+            const dtParts = rawDT.split(' ');
+            let datePart = dtParts[0]; 
+            let timePart = dtParts.length > 1 ? dtParts[1] : null;
+            if(datePart) {
+                if(datePart.includes('/')) {
+                    const dp = datePart.split('/'); 
+                    if(dp.length === 3) dStr = `${dp[2]}-${dp[1]}-${dp[0]}`; 
+                } else if(datePart.includes('-')) dStr = datePart;
+            }
+            if(timePart && timePart.includes(':')) {
+                const t = timePart.split(':');
+                hour = parseInt(t[0]);
+                if(t.length > 1) minute = parseInt(t[1]);
+            }
+            val = parseSmartNum(rawVal);
+        } else {
+            const p = line.split(/[\t;|\s]+/);
+            for(let part of p) {
+                if((part.includes('/') || part.includes('-')) && !part.includes(':')) {
+                    if(part.includes('/')) {
+                        const dp = part.split('/');
+                        if(dp.length===3) dStr = `${dp[2]}-${dp[1]}-${dp[0]}`;
+                    } else dStr = part;
+                } else if(part.includes(':')) {
+                     const t = part.split(':');
+                     hour = parseInt(t[0]);
+                     if(t.length > 1) minute = parseInt(t[1]);
+                } else {
+                    const n = parseSmartNum(part);
+                    if(!isNaN(n)) val = n;
+                }
+            }
+        }
+        if(dStr && hour !== null && !isNaN(val)) {
+            if(hour < 0) hour = 0; if(hour > 23) hour = 23;
+            if(!map.has(dStr)) map.set(dStr, Array.from({length:24}, () => []));
+            map.get(dStr)[hour].push({val, minute}); 
+        }
+    });
+    const finalMap = new Map();
+    for(let [k, hourBuckets] of map) {
+        finalMap.set(k, hourBuckets.map(bucket => {
+            if(bucket.length === 0) return null;
+            const sum = bucket.reduce((a,b)=>a+b.val, 0);
+            const meanVal = sum / bucket.length;
+            bucket.sort((a,b) => a.minute - b.minute);
+            const lastVal = bucket[bucket.length-1].val;
+            return { mean: meanVal, last: lastVal };
+        }));
+    }
+    return finalMap;
+}
+
+function parseExcelRows(rows) {
+    const map = new Map();
+    let start = (rows.length > 0 && typeof rows[0][0] === 'string' && isNaN(Date.parse(rows[0][0]))) ? 1 : 0;
+    for(let i=start; i<rows.length; i++) {
+        const row = rows[i]; if(row.length < 2) continue;
+        let dStr = null, hour = null, minute = 0, val = NaN;
+        const col0 = row[0]; 
+        if(typeof col0 === 'number') { 
+            const d = XLSX.SSF.parse_date_code(col0);
+            if(d) { 
+                dStr = `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}`; 
+                hour = d.H; 
+                minute = d.M; 
+            }
+        } else if (typeof col0 === 'string') { 
+            const dtParts = col0.trim().split(' ');
+            let datePart = dtParts[0];
+            let timePart = dtParts.length > 1 ? dtParts[1] : null;
+            if(datePart.includes('/')) {
+                const dp = datePart.split('/');
+                if(dp.length === 3) dStr = `${dp[2]}-${dp[1]}-${dp[0]}`;
+            } else dStr = datePart;
+            if(timePart && timePart.includes(':')) {
+                const t = timePart.split(':');
+                hour = parseInt(t[0]);
+                if(t.length > 1) minute = parseInt(t[1]);
+            }
+        }
+        const colVal = row[row.length-1]; 
+        if(typeof colVal === 'number') val = colVal;
+        else if (typeof colVal === 'string') val = parseSmartNum(colVal);
+        if(dStr && hour !== null && !isNaN(val)) {
+            if(!map.has(dStr)) map.set(dStr, Array.from({length:24}, () => []));
+            map.get(dStr)[hour].push({val, minute});
+        }
+    }
+    const finalMap = new Map();
+    for(let [k, hourBuckets] of map) {
+        finalMap.set(k, hourBuckets.map(bucket => {
+            if(bucket.length === 0) return null;
+            const sum = bucket.reduce((a,b)=>a+b.val, 0);
+            const meanVal = sum / bucket.length;
+            bucket.sort((a,b) => a.minute - b.minute);
+            const lastVal = bucket[bucket.length-1].val;
+            return { mean: meanVal, last: lastVal };
+        }));
+    }
+    return finalMap;
+}
+
+function processCadText(text, fromFile) {
+    let sum = 0, count = 0;
+    text.split(/\r?\n/).forEach(l => {
+        const p = l.split(/[\t;|\s]+/); 
+        for(let i=p.length-1; i>=0; i--) {
+            let s = p[i].trim(); if(!s) continue;
+            let v = parseSmartNum(s);
+            if(!isNaN(v)) { sum+=v; count++; break; }
+        }
+    });
+    DATA.CAD = { sum, count };
+    $(`statCAD`).innerText = `${fromFile?'Arq':'Txt'}: ${count} ligs`;
+    updateInfraStats();
+}
+function processCadRows(rows) {
+    let sum = 0, count = 0;
+    let start = (rows.length>0 && typeof rows[0][0]==='string') ? 1 : 0;
+    for(let i=start; i<rows.length; i++) {
+        const row = rows[i];
+        let val = row[row.length-1]; 
+        if(typeof val === 'string') val = parseSmartNum(val);
+        if(!isNaN(val)) { sum += val; count++; }
+    }
+    DATA.CAD = { sum, count };
+    $(`statCAD`).innerText = `XLS: ${count} ligs`;
+    updateInfraStats();
+}
+function updateInfraStats() {
+    if(!DATA.CAD) return;
+    $('numLigacoes').value = DATA.CAD.count;
+    const unit = $('unitDemand').value;
+    let ls = 0;
+    if(unit === 'm3mes') {
+        const dias = parseFloat(safeVal('diasMes')) || 30;
+        ls = (DATA.CAD.sum * 1000) / (dias * 86400);
+    } else if (unit === 'm3h') ls = DATA.CAD.sum / 3.6;
+    else ls = DATA.CAD.sum;
+    $('consumoMicro').value = ls.toFixed(4).replace('.', ','); 
+}
+
+function toggleResMode(idx) {
+    const mode = $(`res_mode_${idx}`).value;
+    if(mode === 'pct') {
+        $(`div_vol_${idx}`).style.display = 'block';
+        $(`div_diam_${idx}`).style.display = 'none';
+        $(`res_lvl_${idx}`).placeholder = "Cole dados do nível (%) ...";
+    } else {
+        $(`div_vol_${idx}`).style.display = 'none';
+        $(`div_diam_${idx}`).style.display = 'block';
+        $(`res_lvl_${idx}`).placeholder = "Cole dados do nível (metros) ...";
+    }
+}
+
+function updateResInputs() {
+    const n = parseInt($('qtdRes').value);
+    const c = $('resContainer'); c.innerHTML = '';
+    const sel = $('resDetailSelector'); sel.innerHTML = '';
+    for(let i=0; i<n; i++) {
+        if(!DATA.RES[i]) DATA.RES[i] = {};
+        c.innerHTML += `
+        <div class="res-block">
+            <div style="margin-bottom:5px; display:flex; justify-content:space-between; align-items:center;">
+               <label style="color:var(--accent2)">Res ${i+1} - Modo de Cálculo:</label>
+               <select id="res_mode_${i}" style="width:140px; height:20px; padding:0; font-size:10px;" onchange="toggleResMode(${i})">
+                   <option value="pct">% e Vol. Total</option>
+                   <option value="lvl">Nível(m) e Diâmetro</option>
+               </select>
+            </div>
+            <div class="grid-2">
+                <div id="div_vol_${i}"><label>Vol Total (m³)</label><input id="res_vol_${i}" type="text" value="1000" onblur="formatInput(this)"></div>
+                <div id="div_diam_${i}" style="display:none;"><label>Diâmetro (m)</label><input id="res_diam_${i}" type="text" value="20,0" onblur="formatInput(this)"></div>
+                <div><label>Dados Nível</label><div class="file-row"><input type="file" accept=".csv,.xlsx" onchange="handleFile(this, 'RES_${i}')" style="width:100%"><span id="statRES_${i}" class="status-tag">Vazio</span></div></div>
+            </div>
+            <textarea id="res_lvl_${i}" class="compact" placeholder="Cole dados do nível..." oninput="handleText(this, 'RES_${i}')" style="margin-top:5px; height:28px; min-height:28px;"></textarea>
+        </div>`;
+        sel.add(new Option(`Reservatório ${i+1}`, i));
+    }
+}
+
+function processData() {
+    $('loading').style.display = 'flex';
+    setTimeout(() => {
+        try {
+            if(!DATA.Q1) throw new Error("Vazão da Fonte é obrigatória.");
+            
+            const zThreshold = safeVal('zscore', 3.0);
+            const valCutoff = safeVal('valCutoff', -1); 
+            const useCutoff = $('valCutoff').value.trim() !== ""; 
+            
+            const dailyVols = [];
+            ALL_DATES = Array.from(DATA.Q1.keys()).sort(); 
+            
+            const ds = $('dateSelector');
+            ds.innerHTML = '<option value="" disabled selected>Escolha o dia...</option>';
+            ALL_DATES.forEach(d => ds.add(new Option(d, d)));
+
+            ALL_DATES.forEach(day => {
+                const qArr = DATA.Q1.get(day);
+                const validPoints = qArr.filter(x => x!==null).length;
+                if(validPoints > 20) {
+                    const filled = [...qArr];
+                    for(let i=0; i<24; i++) if(filled[i]===null) filled[i] = filled.find(x=>x!==null)||{mean:0};
+                    const vol = filled.reduce((a,b)=>a+(b.mean||0), 0);
+                    dailyVols.push({ day, vol });
+                }
+            });
+            if(dailyVols.length === 0) throw new Error("Sem dados válidos suficientes.");
+            dailyVols.sort((a,b) => b.vol - a.vol);
+
+            const nPico = parseInt($('nDiasPico').value) || 1;
+            const daysPeak = dailyVols.slice(0, nPico).map(d => d.day);
+            const daysAvg = dailyVols.map(d => d.day); 
+
+            window.buildScenario = (daysList, label) => {
+                const aggregate = (dList, sourceMap, key) => {
+                    const rawResult = new Array(24).fill(null);
+                    let allVals = [];
+                    for(let arr of sourceMap.values()) {
+                        allVals = allVals.concat(arr.filter(v => v !== null).map(v => v[key]));
+                    }
+                    const globalMean = mean(allVals) || 0;
+
+                    for(let h=0; h<24; h++) {
+                        const hourValues = [];
+                        dList.forEach(day => {
+                            let arr = sourceMap.get(day);
+                            if(arr && arr[h] !== null) {
+                                const val = arr[h][key];
+                                if(useCutoff && val > valCutoff) return; 
+                                hourValues.push(val);
+                            }
+                        });
+                        if(hourValues.length > 0) {
+                            const m = mean(hourValues);
+                            const std = Math.sqrt(hourValues.map(x=>Math.pow(x-m,2)).reduce((a,b)=>a+b)/hourValues.length);
+                            const clean = (std > 0) ? hourValues.filter(x => Math.abs((x-m)/std) <= zThreshold) : hourValues;
+                            rawResult[h] = clean.length ? mean(clean) : m;
+                        } 
+                    }
+
+                    const firstIdx = rawResult.findIndex(v => v !== null);
+                    if(firstIdx === -1) return new Array(24).fill(globalMean);
+
+                    for(let i=0; i<firstIdx; i++) rawResult[i] = rawResult[firstIdx]; 
+                    
+                    let lastIdx = -1;
+                    for(let i=23; i>=0; i--) if(rawResult[i] !== null) { lastIdx = i; break; }
+                    for(let i=lastIdx+1; i<24; i++) rawResult[i] = rawResult[lastIdx]; 
+
+                    for(let i=firstIdx; i<lastIdx; i++) {
+                        if(rawResult[i] === null) {
+                            let nextValid = i+1;
+                            while(nextValid < lastIdx && rawResult[nextValid] === null) nextValid++;
+                            const startVal = rawResult[i-1];
+                            const endVal = rawResult[nextValid];
+                            const steps = nextValid - (i-1);
+                            const increment = (endVal - startVal) / steps;
+                            for(let j=0; j<(nextValid-i); j++) {
+                                rawResult[i+j] = startVal + (increment * (j+1));
+                            }
+                        }
+                    }
+                    return rawResult;
+                };
+
+                const q = aggregate(daysList, DATA.Q1, 'mean');
+                if($('unitSource').value === 'm3h') for(let i=0; i<24; i++) q[i] /= 3.6;
+                const p = aggregate(daysList, DATA.P, 'mean');
+                
+                const resCurves = [];
+                const nRes = parseInt($('qtdRes').value);
+                for(let i=0; i<nRes; i++) {
+                    if(DATA.RES[i] && DATA.RES[i].map) {
+                        resCurves.push(aggregate(daysList, DATA.RES[i].map, 'last'));
+                    } else {
+                        resCurves.push(new Array(24).fill(0));
+                    }
+                }
+                return { label, q, p, res: resCurves, dates: daysList };
+            };
+
+            PROCESSED_SCENARIOS.avg = window.buildScenario(daysAvg, "Média Mensal");
+            PROCESSED_SCENARIOS.peak = window.buildScenario(daysPeak, "Pico");
+
+            const sel = $('scenarioSelector');
+            sel.innerHTML = '';
+            sel.add(new Option(`📅 ${PROCESSED_SCENARIOS.avg.label}`, 'avg'));
+            sel.add(new Option(`🔥 ${PROCESSED_SCENARIOS.peak.label}`, 'peak'));
+            sel.add(new Option(`📆 Selecionar Dia Específico...`, 'specific'));
+            sel.selectedIndex = 0;
+            
+            handleScenarioChange(); 
+
+        } catch(e) { alert("Erro: " + e.message); console.error(e); }
+        $('loading').style.display = 'none';
+    }, 100);
+}
+
+function handleScenarioChange() {
+    const type = $('scenarioSelector').value;
+    const dateSel = $('dateSelector');
+    if (type === 'specific') {
+        dateSel.style.display = 'block';
+        $('scenarioDesc').innerText = "Selecione a data no menu ao lado.";
+    } else {
+        dateSel.style.display = 'none';
+        calculateBalance();
+    }
+}
+
+function getPrevDate(dateStr) {
+    try {
+        const [y, m, d] = dateStr.split('-').map(Number);
+        const date = new Date(y, m - 1, d); 
+        date.setDate(date.getDate() - 1);
+        const py = date.getFullYear();
+        const pm = String(date.getMonth() + 1).padStart(2, '0');
+        const pd = String(date.getDate()).padStart(2, '0');
+        return `${py}-${pm}-${pd}`;
+    } catch(e) { return null; }
+}
+
+function calculateBalance() {
+    let type = $('scenarioSelector').value;
+    let sc;
+    let currentSpecificDate = null;
+    
+    if(type === 'specific') {
+        currentSpecificDate = $('dateSelector').value;
+        if(!currentSpecificDate) return;
+        sc = window.buildScenario([currentSpecificDate], `Dia ${currentSpecificDate}`);
+        PROCESSED_SCENARIOS.specific = sc;
+    } else {
+        sc = PROCESSED_SCENARIOS[type];
+        if(type === 'peak' && sc.dates && sc.dates.length === 1) {
+            currentSpecificDate = sc.dates[0];
+        }
+    }
+    
+    if(!sc) return;
+
+    let descText = `Cenário: <b>${sc.label}</b>`;
+    if(type === 'peak' && currentSpecificDate) descText += ` (${currentSpecificDate})`;
+    descText += ` | Vazão Média: ${toFixed(mean(sc.q))} L/s`;
+    $('scenarioDesc').innerHTML = descText;
+
+    const qArm = new Array(24).fill(0);
+    const nRes = parseInt($('qtdRes').value);
+    
+    for(let i=0; i<nRes; i++) {
+        const curve = sc.res[i];
+        
+        const mode = $(`res_mode_${i}`).value;
+        let conversionFactor = 0;
+        
+        if (mode === 'pct') {
+            const volTotal = safeVal(`res_vol_${i}`, 1000); 
+            conversionFactor = volTotal / 100.0;
+        } else {
+            const diam = safeVal(`res_diam_${i}`, 20.0);
+            const radius = diam / 2.0;
+            const area = Math.PI * Math.pow(radius, 2);
+            conversionFactor = area; 
+        }
+
+        let prevDayVal23h = null;
+        if(currentSpecificDate && DATA.RES[i] && DATA.RES[i].map) {
+            const prevDate = getPrevDate(currentSpecificDate);
+            const prevDayData = DATA.RES[i].map.get(prevDate); 
+            if(prevDayData) {
+                 const val23 = prevDayData[23]; 
+                 if(val23 !== null) prevDayVal23h = val23.last;
+            }
+        }
+
+        for(let h=0; h<24; h++) {
+            const nivelAgora = curve[h];
+            let nivelAntes;
+
+            if (h === 0) {
+                if (currentSpecificDate) {
+                     nivelAntes = (prevDayVal23h !== null) ? prevDayVal23h : nivelAgora;
+                } else {
+                     nivelAntes = curve[23];
+                }
+            } else {
+                nivelAntes = curve[h-1];
+            }
+
+            const deltaNivel = nivelAgora - nivelAntes; 
+            const deltaVol_m3 = deltaNivel * conversionFactor; 
+            const q_delta_ls = (deltaVol_m3 * 1000) / 3600;
+            qArm[h] += q_delta_ls;
+        }
+    }
+
+    const Q_Distr = sc.q.map((qIn, h) => Math.max(0, qIn - qArm[h]));
+    let minFlow = Infinity, hMin = 3;
+    for(let h=0; h<6; h++) { if(Q_Distr[h] < minFlow) { minFlow = Q_Distr[h]; hMin = h; } }
+    const Q_MN = minFlow;
+    const P_MN = sc.p[hMin] || 0;
+    const Q_Legit = calcLegit(P_MN);
+    let Leak_MN = Q_MN - Q_Legit;
+    
+    let diagHTML = "";
+    if(Leak_MN < 0) {
+        diagHTML = `<span class="bad">⚠️ PERDA ZERADA: Consumo Teórico (${toFixed(Q_Legit)}) > Vazão Mínima (${toFixed(Q_MN)}).<br>Ajuste os parâmetros FAVAD.</span>`;
+        Leak_MN = 0; 
+        $('diagnosis').style.border = "1px solid red";
+    } else {
+        diagHTML = `<span style="color:#10b981">✓ Cálculo Válido. Vazamento MN: ${toFixed(Leak_MN)} L/s.</span>`;
+        $('diagnosis').style.border = "1px solid #334155";
+    }
+
+    const alpha = parseFloat(safeVal('alpha'));
+    const RealLoss = sc.p.map(p => {
+        if(P_MN <= 0.1) return Leak_MN;
+        return Leak_MN * Math.pow(Math.max(0, p) / P_MN, alpha);
+    });
+
+    const Vol_Disp = Q_Distr.map((q, i) => Math.max(0, q - RealLoss[i]));
+    const Avg_Disp = mean(Vol_Disp);
+    const MicroLs = safeVal('consumoMicro');
+    let AvgApar = Math.max(0, Avg_Disp - MicroLs);
+    const ratio = Avg_Disp > 0 ? AvgApar / Avg_Disp : 0; 
+    const Aparente = Vol_Disp.map(v => v * ratio);
+    const Consumo = Vol_Disp.map(v => v * (1 - ratio));
+    const avgCons = mean(Consumo);
+    const mC = Consumo.map(c => avgCons > 0 ? c/avgCons : 0);
+    const avgLoss = mean(RealLoss);
+    const mPR = RealLoss.map(l => avgLoss > 0 ? l/avgLoss : 0);
+
+    // NEW: Volume Calculation for Summary Table (m3/day)
+    // L/s * 3600s/h * 24h / 1000L/m3 = L/s * 86.4 is wrong for sum
+    // L/s means Liters per second AVERAGE over the hour.
+    // Sum of averages * 1 hour * 3.6 (conversion)
+    const sumRealLs = RealLoss.reduce((a,b)=>a+b,0);
+    const sumAparLs = Aparente.reduce((a,b)=>a+b,0);
+    
+    const volRealDay = sumRealLs * 3.6; // Sum(L/s for each hour) * 3600s / 1000 -> m3
+    const volAparDay = sumAparLs * 3.6;
+    const volTotalLoss = volRealDay + volAparDay;
+    const pctReal = volTotalLoss > 0 ? (volRealDay/volTotalLoss)*100 : 0;
+    const pctApar = volTotalLoss > 0 ? (volAparDay/volTotalLoss)*100 : 0;
+    
+    renderLossTable(volRealDay, volAparDay, pctReal, pctApar);
+    
+    LAST_RESULT = { dist: Q_Distr, p: sc.p, real: RealLoss, apar: Aparente, cons: Consumo, mPR, mC };
+    LAST_LOSS_SUMMARY = { volRealDay, volAparDay, pctReal, pctApar };
+
+    $('kpiPR').innerText = toFixed(mean(RealLoss));
+    $('kpiPA').innerText = toFixed(AvgApar);
+    $('kpiCons').innerText = toFixed(mean(Consumo));
+    $('kpiIPD').innerText = toFixed(((mean(RealLoss)+AvgApar)/(mean(Q_Distr)||1))*100, 1);
+    $('diagnosis').innerHTML = diagHTML;
+
+    updateChart(Q_Distr, Consumo, RealLoss, Aparente);
+    updatePressureChart(sc.p); // NEW: Pressure Chart
+    renderTable(Q_Distr, sc.p, RealLoss, Aparente, Consumo, mPR, mC);
+    
+    updateResDetail();
+}
+
+// NEW: Render Loss Summary Table
+function renderLossTable(real, apar, pReal, pApar) {
+    const tbody = $('lossTableBody');
+    const total = real + apar;
+    tbody.innerHTML = `
+        <tr>
+            <td>💧 Perda Real (Física)</td>
+            <td class="num" style="color:#ef4444">${toFixed(real, 1)} m³</td>
+            <td class="num">${toFixed(pReal, 1)}%</td>
+        </tr>
+        <tr>
+            <td>📉 Perda Aparente (Comercial)</td>
+            <td class="num" style="color:#f59e0b">${toFixed(apar, 1)} m³</td>
+            <td class="num">${toFixed(pApar, 1)}%</td>
+        </tr>
+        <tr style="border-top:2px solid #334155">
+            <td><b>Total Perdas</b></td>
+            <td class="num"><b>${toFixed(total, 1)} m³</b></td>
+            <td class="num">100%</td>
+        </tr>
+    `;
+}
+
+// NEW: Export Loss Summary
+function exportLossSummary() {
+    if(!LAST_LOSS_SUMMARY) return alert("Calcule antes.");
+    const l = LAST_LOSS_SUMMARY;
+    let csv = "Componente;Volume_m3_dia;Porcentagem\n";
+    csv += `Perda Real;${toFixed(l.volRealDay).replace('.', '')};${toFixed(l.pctReal).replace('.', '')}\n`;
+    csv += `Perda Aparente;${toFixed(l.volAparDay).replace('.', '')};${toFixed(l.pctApar).replace('.', '')}\n`;
+    csv += `Total;${toFixed(l.volRealDay+l.volAparDay).replace('.', '')};100\n`;
+    
+    const blob = new Blob(["\ufeff"+csv], { type: 'text/csv;charset=ISO-8859-1;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a"); link.href = url; link.download = "Resumo_Perdas.csv"; link.click();
+}
+
+function updateResDetail() {
+    let type = $('scenarioSelector').value;
+    let sc = (type === 'specific') ? PROCESSED_SCENARIOS.specific : PROCESSED_SCENARIOS[type];
+    if(!sc) return;
+
+    let currentSpecificDate = null;
+    if(type === 'specific') currentSpecificDate = $('dateSelector').value;
+    else if(type === 'peak' && sc.dates && sc.dates.length === 1) currentSpecificDate = sc.dates[0];
+
+    const resIdx = parseInt($('resDetailSelector').value) || 0;
+    const curve = sc.res[resIdx] || new Array(24).fill(0);
+    
+    const mode = $(`res_mode_${resIdx}`).value;
+    const isPct = (mode === 'pct');
+    let conversionFactor = 0;
+    if (isPct) {
+        conversionFactor = safeVal(`res_vol_${resIdx}`, 1000) / 100.0;
+        $('thResLvl').innerText = "Nível (%)";
+    } else {
+        const diam = safeVal(`res_diam_${resIdx}`, 20.0);
+        const radius = diam / 2.0;
+        conversionFactor = Math.PI * Math.pow(radius, 2);
+        $('thResLvl').innerText = "Nível (m)";
+    }
+
+    const labels = Array.from({length:24}, (_,i)=>i+'h');
+    const tb = $('resTbody'); tb.innerHTML = '';
+    
+    const flowData = [];
+    
+    let prevDayVal23h = null;
+    if(currentSpecificDate && DATA.RES[resIdx] && DATA.RES[resIdx].map) {
+        const prevDate = getPrevDate(currentSpecificDate);
+        const prevDayData = DATA.RES[resIdx].map.get(prevDate);
+        if(prevDayData) {
+             const val23 = prevDayData[23];
+             if(val23 !== null) prevDayVal23h = val23.last;
+        }
+    }
+    
+    for(let h=0; h<24; h++) {
+        const nivel = curve[h];
+        
+        let nivelAntes;
+        if(h===0) {
+            if(currentSpecificDate) nivelAntes = (prevDayVal23h !== null) ? prevDayVal23h : nivel;
+            else nivelAntes = curve[23];
+        } else {
+            nivelAntes = curve[h-1];
+        }
+
+        const deltaNivel = nivel - nivelAntes;
+        const deltaVol = deltaNivel * conversionFactor;
+        const flowLs = (deltaVol * 1000) / 3600; 
+        
+        flowData.push(flowLs);
+
+        tb.innerHTML += `<tr>
+            <td>${h}</td>
+            <td style="color:#3b82f6; font-weight:bold;">${toFixed(nivel, isPct?1:2)} ${isPct?'%':'m'}</td>
+            <td style="color:${flowLs>0?'#10b981':'#ef4444'}">${toFixed(flowLs,2)}</td>
+        </tr>`;
+    }
+
+    const ctx = $('resChart').getContext('2d');
+    if(RES_CHART_INSTANCE) RES_CHART_INSTANCE.destroy();
+
+    RES_CHART_INSTANCE = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: `Nível Res ${resIdx+1} (${isPct?'%':'m'})`,
+                data: curve,
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                fill: true,
+                tension: 0.3,
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display:false }, title: { display: true, text: `Perfil Diário: Reservatório ${resIdx+1}`, color:'#94a3b8' } },
+            scales: {
+                y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' }, title: { display:true, text: isPct?'% Cheio':'Metros', color:'#3b82f6' } },
+                x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } }
+            }
+        }
+    });
+}
+
+function calcLegit(P) {
+    const Ligs = safeVal('numLigacoes');
+    const Hab = safeVal('habPorLig');
+    const PctNR = safeVal('pctNaoRes');
+    const EcLig = safeVal('econPorLig'); 
+    const cQ1 = safeVal('c_Q1');
+    const cQ2 = safeVal('c_Q2');
+    const cQ3 = safeVal('c_Q3');
+    const cQ4 = safeVal('c_Q4');
+    const PRef = safeVal('c_PRef');
+    
+    const Pop = Ligs * Hab;
+    const EcNR = Ligs * (PctNR/100) * (EcLig || 1); 
+    const EcRes = Ligs * (1 - PctNR/100) * (EcLig || 1);
+    
+    const f3 = Math.pow(Math.max(0,P)/PRef, 1.5);
+    const f4 = Math.pow(Math.max(0,P)/PRef, 0.5);
+
+    const q1 = (0.10 * Pop * cQ1); 
+    const q2 = (EcNR * cQ2);       
+    const q3 = (Ligs * cQ3 * f3);  
+    const q4 = (Ligs * 0.30 * cQ4 * f4); 
+    const q5 = (EcRes * 0.5);      
+    const q6 = (EcNR * 2.0);       
+
+    return (q1 + q2 + q3 + q4 + q5 + q6) / 3600; 
+}
+
+function updateChart(dist, cons, real, apar) {
+    const ctx = $('mainChart').getContext('2d');
+    if(CHART_INSTANCE) CHART_INSTANCE.destroy();
+    
+    const calc = dist.map((_, i) => cons[i] + apar[i] + real[i]);
+
+    CHART_INSTANCE = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array.from({length:24}, (_,i)=>i+'h'),
+            datasets: [
+                { label: 'Q. Entrada Liq.', data: dist, borderColor: '#38bdf8', borderWidth: 2, tension: 0.3 },
+                { label: 'Perda Real', data: real, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.2)', fill: true, borderWidth: 1 },
+                // NEW: Consumo Dataset added
+                { label: 'Consumo (Qcons)', data: cons, borderColor: '#a855f7', borderWidth: 2, tension: 0.3, pointRadius:2 },
+                { label: 'Total Calculado', data: calc, borderColor: '#10b981', borderDash:[5,5], borderWidth: 1.5 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { 
+                legend: { labels: { color: '#94a3b8' } },
+                tooltip: { 
+                    callbacks: { label: (c) => c.dataset.label + ': ' + toFixed(c.raw) },
+                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                    titleColor: '#10b981'
+                }
+            },
+            scales: {
+                x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' }, beginAtZero: true }
+            }
+        }
+    });
+}
+
+// NEW: Function to render Pressure Chart Separately
+function updatePressureChart(pData) {
+    const ctx = $('pressureChart').getContext('2d');
+    if(PRESSURE_CHART_INSTANCE) PRESSURE_CHART_INSTANCE.destroy();
+
+    PRESSURE_CHART_INSTANCE = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: Array.from({length:24}, (_,i)=>i+'h'),
+            datasets: [
+                { 
+                    label: 'Pressão (mca)', 
+                    data: pData, 
+                    borderColor: '#f59e0b', 
+                    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    borderWidth: 2 
+                }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { 
+                legend: { display: false },
+                title: { display: false }
+            },
+            scales: {
+                x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
+                y: { 
+                    grid: { color: '#334155' }, 
+                    ticks: { color: '#94a3b8' }, 
+                    beginAtZero: false,
+                    title: { display: true, text: 'm.c.a', color: '#f59e0b' }
+                }
+            }
+        }
+    });
+}
+
+function renderTable(dist, p, real, apar, cons, mPR, mC) {
+    const tb = $('tbody'); tb.innerHTML = '';
+    for(let i=0; i<24; i++) {
+        tb.innerHTML += `<tr>
+            <td>${i}</td>
+            <td style="color:#38bdf8">${toFixed(dist[i],1)}</td>
+            <td><b>${toFixed(p[i],1)}</b></td>
+            <td style="color:#ef4444">${toFixed(real[i],1)}</td>
+            <td style="color:#f59e0b">${toFixed(apar[i],1)}</td>
+            <td style="color:var(--cons)">${toFixed(cons[i],1)}</td>
+            <td style="background:#1e293b; color:#fff">${toFixed(mPR[i],3)}</td>
+            <td style="background:#334155; color:#fff">${toFixed(mC[i],3)}</td>
+        </tr>`;
+    }
+}
+
+function exportResults() {
+    if(!LAST_RESULT) return alert("Calcule antes.");
+    const r = LAST_RESULT;
+    let csv = "Hora;Q_Distribuida;Pressao;Perda_Real;Perda_Aparente;Consumo;Multiplicador_PerdaReal;Multiplicador_Consumo\n";
+    const toBr = (n) => n.toFixed(4).replace('.', ',');
+    for(let i=0; i<24; i++) {
+        csv += `${i};${toBr(r.dist[i])};${toBr(r.p[i])};${toBr(r.real[i])};${toBr(r.apar[i])};${toBr(r.cons[i])};${toBr(r.mPR[i])};${toBr(r.mC[i])}\n`;
+    }
+    const blob = new Blob(["\ufeff"+csv], { type: 'text/csv;charset=ISO-8859-1;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a"); link.href = url; link.download = "Resultados_V38_Completo.csv"; link.click();
+}
+
+$('btnSaveState').onclick = () => {
+    const inputs = {};
+    document.querySelectorAll('input, select, textarea').forEach(e => inputs[e.id] = e.value);
+    const raw = {
+        Q1: DATA.Q1 ? Array.from(DATA.Q1.entries()) : [],
+        P: DATA.P ? Array.from(DATA.P.entries()) : [],
+        RES: DATA.RES.map(r => r.map ? Array.from(r.map.entries()) : [])
+    };
+    const blob = new Blob([JSON.stringify({ inputs, raw })], {type: 'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'v38_backup.json'; a.click();
+};
+
+$('jsonInput').onchange = (e) => {
+    const file = e.target.files[0]; if(!file) return;
+    const r = new FileReader();
+    r.onload = ev => {
+        try {
+            const json = JSON.parse(ev.target.result);
+            if(json.inputs) {
+                if(json.inputs['qtdRes']) { $('qtdRes').value = json.inputs['qtdRes']; updateResInputs(); }
+                setTimeout(() => {
+                    for(let k in json.inputs) {
+                        if($(k)) {
+                             $(k).value = json.inputs[k];
+                             if(k.startsWith('res_mode_')) {
+                                 const idx = k.split('_')[2];
+                                 toggleResMode(idx);
+                             }
+                        }
+                    }
+                }, 50);
+            }
+            if(json.raw) {
+                if(json.raw.Q1) DATA.Q1 = new Map(json.raw.Q1);
+                if(json.raw.P) DATA.P = new Map(json.raw.P);
+                if(json.raw.RES) json.raw.RES.forEach((entries, i) => {
+                         if(!DATA.RES[i]) DATA.RES[i] = {};
+                         DATA.RES[i].map = new Map(entries);
+                    });
+            }
+            alert("Carregado! Clique em 'Processar Dados' para atualizar.");
+        } catch(e) { alert("Erro JSON"); }
+    };
+    r.readAsText(file); e.target.value = '';
+};
+
+updateResInputs();
+</script>
+</body>
+</html>
